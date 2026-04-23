@@ -3,47 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Guia do Corretor - Organizador Mensal</title>
+    <title>Broker Finance - Pro</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
   </head>
   <body>
-    <section class="today-banner" id="today-banner"></section>
     <header class="admin-panel">
-      <h3>Novo Compromisso / Lembrete</h3>
-      <form id="schedule-form">
+      <div class="month-navigation">
+        <button onclick="changeMonth(-1)">
+          <i data-lucide="chevron-left"></i>
+        </button>
+        <h1 id="current-month-display">MAIO 2026</h1>
+        <button onclick="changeMonth(1)">
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="total-banner">
+        <span>Previsão de Gastos: </span>
+        <strong id="month-total">R$ 0,00</strong>
+      </div>
+
+      <form id="finance-form">
         <input
           type="text"
           id="title"
-          placeholder="Título (Ex: Seguro Auto - João, Consulta...)"
+          placeholder="Descrição (Ex: Uniesp Ryan...)"
           required
         />
-
-        <div class="input-group">
+        <div class="input-row">
+          <input
+            type="number"
+            id="amount"
+            step="0.01"
+            placeholder="Valor (R$)"
+            required
+          />
           <input type="date" id="date" required />
-          <div class="time-picker">
-            <select id="hour" title="Hora"></select>
-            <span>:</span>
-            <select id="minute" title="Minutos"></select>
-          </div>
         </div>
-
-        <select id="category">
-          <option value="vencimento">Vencimento de Seguro</option>
-          <option value="pagamento">Pagamento / Cobrança</option>
-          <option value="reuniao">Reunião com Cliente</option>
-          <option value="saude">Consulta Médica</option>
-          <option value="outros">Outros</option>
-        </select>
-
+        <div class="options-row">
+          <select id="status">
+            <option value="pendente">Pendente</option>
+            <option value="pago">Pago (PG)</option>
+          </select>
+          <label class="checkbox-container">
+            <input type="checkbox" id="is-recurring" />
+            <span>Conta Mensal Fixa</span>
+          </label>
+        </div>
         <div class="form-actions">
-          <button type="submit" id="submit-btn">Agendar</button>
-          <button type="button" id="clear-btn">Limpar Tudo</button>
+          <button type="submit" id="submit-btn">Salvar no Mês</button>
         </div>
       </form>
     </header>
 
-    <main class="schedule-grid" id="schedule-container"></main>
+    <main class="schedule-grid" id="finance-container"></main>
 
     <script src="script.js"></script>
   </body>

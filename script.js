@@ -1,229 +1,159 @@
-const CONFIG = {
-  CATEGORIES: {
-    vencimento: {
-      icon: "alert-triangle",
-      class: "cat-vencimento",
-      label: "Vencimento",
-    },
-    pagamento: {
-      icon: "dollar-sign",
-      class: "cat-pagamento",
-      label: "Pagamento",
-    },
-    reuniao: { icon: "briefcase", class: "cat-reuniao", label: "Reunião" },
-    saude: { icon: "heart", class: "cat-saude", label: "Saúde" },
-    outros: { icon: "calendar", class: "cat-outros", label: "Geral" },
-  },
-};
-
-// Armazenamento em chave específica para não misturar com seu projeto de animes
-let scheduleData = JSON.parse(localStorage.getItem("brokerSchedule")) || [];
+let financeData = JSON.parse(localStorage.getItem("brokerFinance")) || [];
+let viewDate = new Date(); // Mês que o usuário está vendo agora
 let editIndex = null;
 
-const elements = {
-  form: document.getElementById("schedule-form"),
-  container: document.getElementById("schedule-container"),
-  submitBtn: document.getElementById("submit-btn"),
-  clearBtn: document.getElementById("clear-btn"),
-  dateInput: document.getElementById("date"),
+const init = () => {
+  updateDisplay();
+  document.getElementById("date").valueAsDate = new Date();
 };
 
-/**
- * Inicialização do App
- */
-const init = () => {
-  setupTimeSelectors();
-  updateTodayBanner();
-  // Define a data padrão do input como a data de hoje
-  elements.dateInput.valueAsDate = new Date();
+const updateDisplay = () => {
+  const monthYear = viewDate.toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+  document.getElementById("current-month-display").innerText = monthYear;
   render();
 };
 
-/**
- * Preenche os seletores de Hora e Minuto
- */
-const setupTimeSelectors = () => {
-  const hSelect = document.getElementById("hour");
-  const mSelect = document.getElementById("minute");
-  for (let i = 0; i < 24; i++)
-    hSelect.add(new Option(i.toString().padStart(2, "0")));
-  for (let i = 0; i < 60; i += 5)
-    mSelect.add(new Option(i.toString().padStart(2, "0")));
+window.changeMonth = (diff) => {
+  viewDate.setMonth(viewDate.getMonth() + diff);
+  updateDisplay();
 };
 
-/**
- * Atualiza o banner informativo no topo da página
- */
-const updateTodayBanner = () => {
-  const banner = document.getElementById("today-banner");
-  if (!banner) return;
-
-  const agora = new Date();
-  const opcoes = {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  };
-  const dataFormatada = agora.toLocaleDateString("pt-BR", opcoes);
-
-  banner.innerHTML = `
-        <h1>Hoje é ${dataFormatada}</h1>
-        <p>Organize seus prazos e não perca nenhum vencimento.</p>
-    `;
-};
-
-/**
- * Renderiza a lista de compromissos agrupada por data
- */
 const render = () => {
-  elements.container.innerHTML = "";
+  const container = document.getElementById("finance-container");
+  const totalDisplay = document.getElementById("month-total");
+  container.innerHTML = "";
+  let totalMês = 0;
 
-  // 1. Ordena os dados cronologicamente
-  const sortedData = [...scheduleData].sort((a, b) => {
-    return (a.date + a.time).localeCompare(b.date + b.time);
+  const vMonth = viewDate.getMonth();
+  const vYear = viewDate.getFullYear();
+
+  // Filtra apenas o que pertence ao mês/ano da visualização atual
+  const filteredItems = financeData
+    .filter((item) => {
+      const d = new Date(item.date + "T00:00:00");
+      return d.getMonth() === vMonth && d.getFullYear() === vYear;
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.date + "T00:00:00").getDate() -
+        new Date(b.date + "T00:00:00").getDate(),
+    );
+
+  // Se o mês estiver vazio, oferece importar recorrentes
+  if (filteredItems.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:40px; opacity:0.5">
+            <p>Nenhum lançamento para este mês.</p>
+            <button onclick="copyRecurrent()" style="background:var(--primary); border:none; color:white; padding:10px 20px; border-radius:5px">
+                Importar Contas Fixas
+            </button>
+        </div>`;
+  }
+
+  filteredItems.forEach((item) => {
+    const originalIndex = financeData.indexOf(item);
+    const valor = parseFloat(item.amount) || 0;
+    totalMês += valor;
+
+    // Lógica de cores da imagem: Se tiver "cartão" ou "visa" ou "master" fica preto
+    const isCard = /cartão|visa|master/i.test(item.title);
+
+    const card = document.createElement("article");
+    card.className = `event-card ${item.status} ${isCard ? "is-card" : ""}`;
+
+    card.innerHTML = `
+            <div>
+                <small style="color: #94a3b8">DIA ${new Date(item.date + "T00:00:00").getDate().toString().padStart(2, "0")}</small>
+                <strong style="display: block; text-transform: uppercase; font-size: 0.85rem">${item.title}</strong>
+                <span class="status-tag ${item.status === "pago" ? "tag-pg" : "tag-wait"}">
+                    ${item.status === "pago" ? "PG" : "PENDENTE"}
+                </span>
+            </div>
+            <div style="text-align: right">
+                <div class="amount-display">R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                <div class="card-actions" style="margin-top: 5px">
+                    <button class="btn-icon" onclick="toggleStatus(${originalIndex})"><i data-lucide="check"></i></button>
+                    <button class="btn-icon" onclick="handleEdit(${originalIndex})"><i data-lucide="pencil"></i></button>
+                    <button class="btn-icon" onclick="handleDelete(${originalIndex})"><i data-lucide="trash"></i></button>
+                </div>
+            </div>
+        `;
+    container.appendChild(card);
   });
 
-  // 2. Agrupa os itens por data { "2024-05-10": [...], "2024-05-11": [...] }
-  const grouped = sortedData.reduce((acc, curr) => {
-    if (!acc[curr.date]) acc[curr.date] = [];
-    acc[curr.date].push(curr);
-    return acc;
-  }, {});
-
-  // 3. Datas de referência para alertas
-  const hoje = new Date().toISOString().split("T")[0];
-  const amanhaData = new Date();
-  amanhaData.setDate(amanhaData.getDate() + 1);
-  const amanha = amanhaData.toISOString().split("T")[0];
-
-  // 4. Cria a interface para cada grupo de data
-  Object.keys(grouped).forEach((date) => {
-    const dateSection = document.createElement("div");
-    dateSection.className = "date-group";
-
-    // Formata a data do título (Ex: sex., 10/05/2024)
-    const dateObj = new Date(date + "T00:00:00");
-    const displayDate = dateObj.toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      weekday: "short",
-    });
-
-    dateSection.innerHTML = `<h2 class="date-label">${displayDate}</h2>`;
-
-    grouped[date].forEach((event) => {
-      const cat = CONFIG.CATEGORIES[event.category] || CONFIG.CATEGORIES.outros;
-      const originalIndex = scheduleData.indexOf(event);
-
-      // Verifica se é HOJE ou AMANHÃ para destaque visual
-      let priorityClass = "";
-      let priorityTag = "";
-
-      if (event.date === hoje) {
-        priorityClass = "is-today";
-        priorityTag = '<span class="priority-tag">HOJE</span>';
-      } else if (event.date === amanha) {
-        priorityTag =
-          '<span class="priority-tag" style="background: var(--warning); color: black">AMANHÃ</span>';
-      }
-
-      const card = document.createElement("article");
-      card.className = `event-card ${cat.class} ${priorityClass}`;
-      card.innerHTML = `
-                ${priorityTag}
-                <strong class="event-title">${event.title}</strong>
-                <div class="event-meta">
-                    <span><i data-lucide="clock" style="width:14px; vertical-align: middle;"></i> ${event.time}</span>
-                    <span><i data-lucide="${cat.icon}" style="width:14px; vertical-align: middle;"></i> ${cat.label}</span>
-                </div>
-                <div class="card-actions">
-                    <button class="btn-icon" title="Editar" onclick="handleEdit(${originalIndex})"><i data-lucide="pencil"></i></button>
-                    <button class="btn-icon" title="Excluir" onclick="handleDelete(${originalIndex})"><i data-lucide="trash-2"></i></button>
-                </div>
-            `;
-      dateSection.appendChild(card);
-    });
-    elements.container.appendChild(dateSection);
-  });
-
-  // Inicializa os ícones do Lucide após renderizar o HTML
+  totalDisplay.innerText = `R$ ${totalMês.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   if (window.lucide) lucide.createIcons();
 };
 
-/**
- * Lógica do Formulário (Salvar / Editar)
- */
-elements.form.onsubmit = (e) => {
-  e.preventDefault();
+// MÁGICA: Pega tudo que é recorrente e joga para o mês que o pai está vendo
+window.copyRecurrent = () => {
+  const recurrents = financeData.filter((item) => item.isRecurring);
 
-  const newEvent = {
-    title: document.getElementById("title").value,
-    date: document.getElementById("date").value,
-    time: `${document.getElementById("hour").value}:${document.getElementById("minute").value}`,
-    category: document.getElementById("category").value,
-  };
+  // Evita duplicatas: remove o que já existir de recorrente no mês destino antes de copiar
+  const newItems = recurrents.map((item) => {
+    const newDate = new Date(
+      viewDate.getFullYear(),
+      viewDate.getMonth(),
+      new Date(item.date + "T00:00:00").getDate(),
+    );
+    return {
+      ...item,
+      status: "pendente", // Sempre começa pendente no mês novo
+      date: newDate.toISOString().split("T")[0],
+    };
+  });
 
-  if (editIndex !== null) {
-    scheduleData[editIndex] = newEvent;
-    editIndex = null;
-    elements.submitBtn.textContent = "Agendar";
-    elements.submitBtn.style.background = "var(--primary)";
-  } else {
-    scheduleData.push(newEvent);
-  }
-
+  financeData.push(...newItems);
   save();
 };
 
-/**
- * Prepara o formulário para edição
- */
-window.handleEdit = (index) => {
-  const item = scheduleData[index];
-  document.getElementById("title").value = item.title;
-  document.getElementById("date").value = item.date;
-  const [h, m] = item.time.split(":");
-  document.getElementById("hour").value = h;
-  document.getElementById("minute").value = m;
-  document.getElementById("category").value = item.category;
+document.getElementById("finance-form").onsubmit = (e) => {
+  e.preventDefault();
+  const newItem = {
+    title: document.getElementById("title").value,
+    amount: document.getElementById("amount").value,
+    date: document.getElementById("date").value,
+    status: document.getElementById("status").value,
+    isRecurring: document.getElementById("is-recurring").checked,
+  };
 
+  if (editIndex !== null) financeData[editIndex] = newItem;
+  else financeData.push(newItem);
+
+  save();
+  e.target.reset();
+  document.getElementById("date").valueAsDate = new Date();
+};
+
+window.toggleStatus = (index) => {
+  financeData[index].status =
+    financeData[index].status === "pago" ? "pendente" : "pago";
+  save();
+};
+
+window.handleEdit = (index) => {
+  const item = financeData[index];
+  document.getElementById("title").value = item.title;
+  document.getElementById("amount").value = item.amount;
+  document.getElementById("date").value = item.date;
+  document.getElementById("status").value = item.status;
+  document.getElementById("is-recurring").checked = item.isRecurring;
   editIndex = index;
-  elements.submitBtn.textContent = "Salvar Alteração";
-  elements.submitBtn.style.background = "var(--success)";
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-/**
- * Remove um compromisso
- */
 window.handleDelete = (index) => {
-  if (confirm("Deseja excluir este compromisso?")) {
-    scheduleData.splice(index, 1);
+  if (confirm("Excluir?")) {
+    financeData.splice(index, 1);
     save();
   }
 };
 
-/**
- * Persistência de dados e atualização da tela
- */
 const save = () => {
-  localStorage.setItem("brokerSchedule", JSON.stringify(scheduleData));
+  localStorage.setItem("brokerFinance", JSON.stringify(financeData));
   render();
-  elements.form.reset();
-  elements.dateInput.valueAsDate = new Date(); // Reset para data de hoje
 };
 
-/**
- * Limpa todos os dados
- */
-elements.clearBtn.onclick = () => {
-  if (confirm("Isso apagará TODOS os compromissos agendados. Tem certeza?")) {
-    scheduleData = [];
-    save();
-  }
-};
-
-// Iniciar aplicação
 init();

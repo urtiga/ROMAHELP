@@ -1,213 +1,91 @@
 :root {
-  --bg: #0a0a0a;
-  --surface: #141414;
-  --card: #1d1d1d;
-  --primary: #3b82f6;
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --card: #334155;
+  --primary: #22c55e;
   --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #eab308; /* Amarelo para vencimentos */
-  --info: #06b6d4; /* Azul claro para reuniões */
-  --text: #f3f4f6;
-  --text-muted: #9ca3af;
+  --card-black: #18181b; /* Cor dos cartões da imagem */
+  --text: #f8fafc;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Inter", sans-serif;
+  padding: 15px;
   margin: 0;
-  padding: 20px;
 }
 
-.admin-panel {
-  background: var(--surface);
-  padding: 20px;
-  border-radius: 16px;
-  margin-bottom: 30px;
-  border: 1px solid #2a2a2a;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-#schedule-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.input-group {
+.month-navigation {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-input,
-select,
-button {
-  background: #252525;
-  border: 1px solid #333;
-  color: white;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-}
-
-#title {
-  grid-column: span 2;
-}
-
-/* Grid de cards */
-.schedule-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.date-group {
-  border-top: 2px solid #333;
-  padding-top: 10px;
-}
-
-.date-label {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--primary);
-  margin-bottom: 15px;
+.month-navigation h1 {
+  font-size: 1.2rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  color: var(--primary);
+}
+
+.total-banner {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  margin-bottom: 20px;
+  border: 1px solid #334155;
 }
 
 .event-card {
   background: var(--card);
-  padding: 15px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-  border-left: 4px solid #444;
-  transition: transform 0.2s;
-}
-
-.event-card:hover {
-  transform: translateY(-3px);
-}
-
-/* Cores por Categoria */
-.cat-vencimento {
-  border-left-color: var(--warning);
-}
-.cat-pagamento {
-  border-left-color: var(--success);
-}
-.cat-reuniao {
-  border-left-color: var(--info);
-}
-.cat-saude {
-  border-left-color: var(--danger);
-}
-
-.event-title {
-  display: block;
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.event-meta {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 6px solid #475569;
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.card-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid #2a2a2a;
-}
-
-.btn-icon {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
 }
 
-#submit-btn {
-  background: var(--primary);
-  font-weight: bold;
-  grid-column: span 1;
+/* Identificadores Visuais baseados na foto do seu pai */
+.event-card.pago {
+  border-left-color: var(--primary);
 }
-#clear-btn {
-  background: transparent;
-  border-color: var(--danger);
-  color: var(--danger);
+.event-card.pendente {
+  border-left-color: var(--danger);
 }
-
-@media (max-width: 600px) {
-  #schedule-form {
-    grid-template-columns: 1fr;
-  }
-  #title {
-    grid-column: span 1;
-  }
-}
-/* Banner de Hoje */
-.today-banner {
-  background: linear-gradient(90deg, var(--primary), #1e40af);
-  color: white;
-  padding: 15px 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.event-card.is-card {
+  background: var(--card-black);
+  border-left-color: #52525b;
 }
 
-.today-banner h1 {
-  margin: 0;
-  font-size: 1.2rem;
+.amount-display {
+  font-size: 1.1rem;
+  font-weight: 800;
 }
-.today-banner p {
-  margin: 5px 0 0;
-  opacity: 0.9;
-  font-size: 0.9rem;
-}
-
-/* Destaque de Prioridade */
-.event-card.is-today {
-  border-left-width: 8px;
-  background: #2a2a2a;
-  position: relative;
-  animation: pulse border 2s infinite;
-}
-
-.priority-tag {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+.status-tag {
   font-size: 10px;
-  background: var(--danger);
+  font-weight: bold;
   padding: 2px 6px;
   border-radius: 4px;
-  font-weight: bold;
-  text-transform: uppercase;
+}
+.tag-pg {
+  background: var(--primary);
+  color: #052e16;
+}
+.tag-wait {
+  background: var(--danger);
+  color: white;
 }
 
-@keyframes pulse-border {
-  0% {
-    border-left-color: var(--danger);
-  }
-  50% {
-    border-left-color: var(--warning);
-  }
-  100% {
-    border-left-color: var(--danger);
-  }
+button {
+  cursor: pointer;
+  transition: 0.2s;
+}
+button:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
 }
