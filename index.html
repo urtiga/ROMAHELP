@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Broker Finance Pro - Controle de Despesas</title>
+    <title>Finance Pro</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
   </head>
@@ -11,25 +11,38 @@
     <div class="app-container">
       <header class="main-header">
         <div class="nav-control">
-          <button
-            onclick="changeMonth(-1)"
-            class="nav-btn"
-            title="Mês Anterior"
-          >
+          <button onclick="changeMonth(-1)" class="nav-btn">
             <i data-lucide="chevron-left"></i>
           </button>
           <div class="title-group">
-            <h1 id="dynamic-title">Despesas de Maio</h1>
+            <span class="main-label">DESPESAS MENSAIS</span>
+            <h1 id="dynamic-title">Maio</h1>
             <span id="year-label">2026</span>
           </div>
-          <button onclick="changeMonth(1)" class="nav-btn" title="Próximo Mês">
+          <button onclick="changeMonth(1)" class="nav-btn">
             <i data-lucide="chevron-right"></i>
           </button>
         </div>
 
-        <div class="summary-card">
-          <small>PREVISÃO TOTAL DO MÊS</small>
-          <strong id="month-total">R$ 0,00</strong>
+        <div class="danger-zone">
+          <button onclick="clearMonth()" class="btn-clear-new">
+            <i data-lucide="eraser"></i> Limpar este mês
+          </button>
+        </div>
+
+        <div class="summary-container">
+          <div class="summary-item">
+            <small>TOTAL MÊS</small>
+            <strong id="month-total">R$ 0,00</strong>
+          </div>
+          <div class="summary-item paid">
+            <small>JÁ PAGO</small>
+            <strong id="total-paid">R$ 0,00</strong>
+          </div>
+          <div class="summary-item pending">
+            <small>A PAGAR</small>
+            <strong id="total-pending">R$ 0,00</strong>
+          </div>
         </div>
       </header>
 
@@ -39,7 +52,7 @@
           <input
             type="text"
             id="title"
-            placeholder="Descrição (Ex: Condomínio, Unimed...)"
+            placeholder="Descrição (Ex: Condomínio...)"
             required
           />
           <div class="row">
@@ -50,7 +63,7 @@
               placeholder="Valor R$"
               required
             />
-            <input type="date" id="date" required />
+            <input type="date" id="date" class="white-calendar" required />
           </div>
           <div class="row">
             <select id="status">
@@ -71,11 +84,23 @@
         </form>
       </section>
 
-      <main id="finance-container" class="items-list"></main>
+      <div id="lists-wrapper">
+        <div class="section-container">
+          <h2 class="list-divider">
+            <i data-lucide="calendar-days"></i> CONTAS FIXAS (MENSAIS)
+          </h2>
+          <div id="fixed-container" class="items-list"></div>
+        </div>
+        <div class="section-container">
+          <h2 class="list-divider">
+            <i data-lucide="shopping-cart"></i> GASTOS EVENTUAIS
+          </h2>
+          <div id="eventual-container" class="items-list"></div>
+        </div>
+      </div>
 
       <div id="import-area" class="import-section"></div>
     </div>
-
     <script src="script.js"></script>
   </body>
 </html>

@@ -2,48 +2,28 @@ let financeData = JSON.parse(localStorage.getItem("brokerFinance")) || [];
 let viewDate = new Date();
 let editIndex = null;
 
-const elements = {
-  formContainer: document.getElementById("form-container"),
-  formTitle: document.getElementById("form-title"),
-  submitBtn: document.getElementById("submit-btn"),
-  cancelBtn: document.getElementById("cancel-btn"),
-  form: document.getElementById("finance-form"),
-  importArea: document.getElementById("import-area"),
-};
-
-const init = () => {
-  updateDisplay();
-  document.getElementById("date").valueAsDate = viewDate;
-};
-
 const updateDisplay = () => {
-  const monthName = viewDate.toLocaleDateString("pt-BR", { month: "long" });
   document.getElementById("dynamic-title").innerText =
-    `Despesas de ${monthName}`;
+    viewDate.toLocaleDateString("pt-BR", { month: "long" });
   document.getElementById("year-label").innerText = viewDate.getFullYear();
   render();
 };
 
-window.changeMonth = (diff) => {
-  viewDate.setMonth(viewDate.getMonth() + diff);
-  resetForm();
-  updateDisplay();
-};
-
 const render = () => {
-  const container = document.getElementById("finance-container");
-  const totalDisplay = document.getElementById("month-total");
-  container.innerHTML = "";
-  elements.importArea.innerHTML = "";
-  let totalMês = 0;
+  const fixedContainer = document.getElementById("fixed-container");
+  const eventualContainer = document.getElementById("eventual-container");
+  const stats = { total: 0, paid: 0, pending: 0 };
 
-  const vMonth = viewDate.getMonth();
-  const vYear = viewDate.getFullYear();
+  fixedContainer.innerHTML = "";
+  eventualContainer.innerHTML = "";
 
-  const filteredItems = financeData
+  const filtered = financeData
     .filter((item) => {
       const d = new Date(item.date + "T00:00:00");
-      return d.getMonth() === vMonth && d.getFullYear() === vYear;
+      return (
+        d.getMonth() === viewDate.getMonth() &&
+        d.getFullYear() === viewDate.getFullYear()
+      );
     })
     .sort(
       (a, b) =>
@@ -51,88 +31,136 @@ const render = () => {
         new Date(b.date + "T00:00:00").getDate(),
     );
 
-  if (filteredItems.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px; border: 2px dashed #334155; border-radius:15px; opacity:0.6">
-            <p>Nenhuma despesa lançada para este mês.</p>
-        </div>`;
-  }
-
-  filteredItems.forEach((item) => {
+  filtered.forEach((item) => {
     const idx = financeData.indexOf(item);
     const valor = parseFloat(item.amount) || 0;
-    totalMês += valor;
-    const isCard = /cartão|visa|master/i.test(item.title);
 
-    const card = document.createElement("div");
-    card.className = `item-card ${item.status} ${isCard ? "is-card" : ""}`;
-    card.innerHTML = `
-            <div class="item-info">
-                <small>DIA ${new Date(item.date + "T00:00:00").getDate().toString().padStart(2, "0")}</small>
-                <b>${item.title}</b>
-                <div class="actions">
-                    <button class="btn-sm" onclick="toggleStatus(${idx})" style="color: ${item.status === "pago" ? "var(--primary)" : "var(--warning)"}">
-                        <i data-lucide="${item.status === "pago" ? "check-circle" : "circle"}"></i>
-                    </button>
-                    <button class="btn-sm" onclick="handleEdit(${idx})"><i data-lucide="pencil"></i></button>
-                    <button class="btn-sm" onclick="handleDelete(${idx})" style="color:var(--danger)"><i data-lucide="trash-2"></i></button>
-                </div>
-            </div>
-            <div class="amount">
-                R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                <div style="font-size: 10px; font-weight: bold; margin-top: 4px; color: ${item.status === "pago" ? "var(--primary)" : "var(--warning)"}">
-                    ${item.status === "pago" ? "PAGO" : "PENDENTE"}
-                </div>
-            </div>
-        `;
-    container.appendChild(card);
+    stats.total += valor;
+    item.status === "pago" ? (stats.paid += valor) : (stats.pending += valor);
+
+    const card = createCard(item, idx);
+
+    item.isRecurring
+      ? fixedContainer.appendChild(card)
+      : eventualContainer.appendChild(card);
   });
 
-  // Botão de Importação sempre visível se houver recorrentes globais
-  const hasRecurrents = financeData.some((item) => item.isRecurring);
-  if (hasRecurrents) {
-    elements.importArea.innerHTML = `
-            <button onclick="copyRecurrent()" class="btn-import">
-                <i data-lucide="copy-plus"></i> Importar Contas Fixas Mensais
-            </button>
-        `;
-  }
+  document.getElementById("month-total").innerText =
+    `R$ ${stats.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  document.getElementById("total-paid").innerText =
+    `R$ ${stats.paid.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  document.getElementById("total-pending").innerText =
+    `R$ ${stats.pending.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-  totalDisplay.innerText = `R$ ${totalMês.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  const importArea = document.getElementById("import-area");
+  importArea.innerHTML = financeData.some((i) => i.isRecurring)
+    ? `<button onclick="copyRecurrent()" class="btn-import"><i data-lucide="copy-plus"></i> Importar Contas Fixas Mensais</button>`
+    : "";
+
   if (window.lucide) lucide.createIcons();
+};
+
+const createCard = (item, idx) => {
+  const itemDate = new Date(item.date + "T00:00:00");
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const isUrgent = item.status === "pendente" && itemDate <= hoje;
+
+  const div = document.createElement("div");
+  div.className = `item-card ${item.status} ${isUrgent ? "urgent" : ""}`;
+
+  div.innerHTML = `
+    <div class="item-info">
+      <small style="color: var(--text-dim)">DIA ${itemDate
+        .getDate()
+        .toString()
+        .padStart(2, "0")}</small>
+      <br><b>${item.title}</b>
+
+      <div class="actions" style="display: flex; gap: 8px; margin-top: 10px;">
+        <button class="btn-sm btn-status ${item.status}" onclick="toggleStatus(${idx})">
+          <i data-lucide="${
+            item.status === "pago" ? "check-circle" : "circle"
+          }"></i>
+        </button>
+
+        <button class="btn-sm btn-edit" onclick="handleEdit(${idx})">
+          <i data-lucide="pencil"></i>
+        </button>
+
+        <button class="btn-sm btn-delete" onclick="handleDelete(${idx})">
+          <i data-lucide="trash-2"></i>
+        </button>
+      </div>
+    </div>
+
+    <div style="text-align:right">
+      <div style="font-size: 1.1rem; font-weight: 800;">
+        R$ ${parseFloat(item.amount).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+        })}
+      </div>
+
+      <div style="font-size: 10px; font-weight: bold; color: ${
+        item.status === "pago" ? "var(--primary)" : "var(--warning)"
+      }">
+        ${
+          isUrgent
+            ? "🚨 VENCIDO/HOJE"
+            : item.status === "pago"
+              ? "PG OK"
+              : "PENDENTE"
+        }
+      </div>
+    </div>
+  `;
+  return div;
 };
 
 window.handleEdit = (i) => {
   const item = financeData[i];
+  editIndex = i;
+
   document.getElementById("title").value = item.title;
   document.getElementById("amount").value = item.amount;
   document.getElementById("date").value = item.date;
   document.getElementById("status").value = item.status;
   document.getElementById("is-recurring").checked = item.isRecurring;
 
-  editIndex = i;
-  elements.formContainer.classList.add("editing-mode");
-  elements.formTitle.innerText = "⚠️ Editando Lançamento Existente";
-  elements.submitBtn.innerText = "Salvar Alterações";
-  elements.submitBtn.style.background = "var(--warning)";
-  elements.submitBtn.style.color = "black";
-  elements.cancelBtn.style.display = "block";
+  const container = document.getElementById("form-container");
+  container.classList.add("editing-mode");
+
+  document.getElementById("form-title").innerHTML =
+    "⚠️ EDITANDO LANÇAMENTO EXISTENTE";
+  document.getElementById("submit-btn").innerText = "Salvar Alterações";
+  document.getElementById("submit-btn").style.background = "var(--warning)";
+  document.getElementById("submit-btn").style.color = "black";
+  document.getElementById("cancel-btn").style.display = "block";
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 window.resetForm = () => {
   editIndex = null;
-  elements.form.reset();
+  document.getElementById("finance-form").reset();
   document.getElementById("date").valueAsDate = viewDate;
-  elements.formContainer.classList.remove("editing-mode");
-  elements.formTitle.innerText = "Novo Lançamento";
-  elements.submitBtn.innerText = "Adicionar Lançamento";
-  elements.submitBtn.style.background = "var(--accent)";
-  elements.submitBtn.style.color = "white";
-  elements.cancelBtn.style.display = "none";
+
+  const container = document.getElementById("form-container");
+  container.classList.remove("editing-mode");
+
+  document.getElementById("form-title").innerText = "Novo Lançamento";
+  document.getElementById("submit-btn").innerText = "Adicionar Lançamento";
+  document.getElementById("submit-btn").style.background = "var(--accent)";
+  document.getElementById("submit-btn").style.color = "white";
+  document.getElementById("cancel-btn").style.display = "none";
 };
 
-elements.form.onsubmit = (e) => {
+document.getElementById("finance-form").onsubmit = (e) => {
   e.preventDefault();
+
+  const btn = document.getElementById("submit-btn");
+
   const newItem = {
     title: document.getElementById("title").value,
     amount: document.getElementById("amount").value,
@@ -145,62 +173,123 @@ elements.form.onsubmit = (e) => {
   else financeData.push(newItem);
 
   localStorage.setItem("brokerFinance", JSON.stringify(financeData));
-  resetForm();
-  render();
-};
 
-window.copyRecurrent = () => {
-  const recurrents = financeData.filter((item) => item.isRecurring);
-  const currentMonthTitles = financeData
-    .filter((item) => {
-      const d = new Date(item.date + "T00:00:00");
-      return (
-        d.getMonth() === viewDate.getMonth() &&
-        d.getFullYear() === viewDate.getFullYear()
-      );
-    })
-    .map((i) => i.title.toLowerCase());
+  // animação de sucesso
+  btn.classList.add("success");
+  btn.innerText = "Salvo!";
 
-  const toImport = recurrents.filter(
-    (r) => !currentMonthTitles.includes(r.title.toLowerCase()),
-  );
+  setTimeout(() => {
+    btn.classList.remove("success");
+    btn.innerText =
+      editIndex !== null ? "Salvar Alterações" : "Adicionar Lançamento";
 
-  if (toImport.length === 0) {
-    alert("Todas as contas fixas já constam neste mês!");
-    return;
-  }
-
-  toImport.forEach((item) => {
-    const d = new Date(item.date + "T00:00:00");
-    const newDate = new Date(
-      viewDate.getFullYear(),
-      viewDate.getMonth(),
-      d.getDate(),
-    );
-    financeData.push({
-      ...item,
-      status: "pendente",
-      date: newDate.toISOString().split("T")[0],
-    });
-  });
-
-  localStorage.setItem("brokerFinance", JSON.stringify(financeData));
-  render();
+    resetForm();
+    render();
+  }, 800);
 };
 
 window.toggleStatus = (i) => {
   financeData[i].status =
     financeData[i].status === "pago" ? "pendente" : "pago";
+
   localStorage.setItem("brokerFinance", JSON.stringify(financeData));
   render();
+
+  // animação
+  setTimeout(() => {
+    const cards = document.querySelectorAll(".item-card");
+    if (cards[i]) {
+      cards[i].classList.add("animate-status");
+      setTimeout(() => {
+        cards[i].classList.remove("animate-status");
+      }, 300);
+    }
+  }, 50);
 };
 
 window.handleDelete = (i) => {
-  if (confirm("Deseja apagar este item permanentemente?")) {
+  if (confirm("Apagar?")) {
     financeData.splice(i, 1);
     localStorage.setItem("brokerFinance", JSON.stringify(financeData));
     render();
   }
 };
 
-init();
+window.clearMonth = () => {
+  if (confirm("Limpar mês?")) {
+    const m = viewDate.getMonth(),
+      a = viewDate.getFullYear();
+
+    financeData = financeData.filter((i) => {
+      const d = new Date(i.date + "T00:00:00");
+      return d.getMonth() !== m || d.getFullYear() !== a;
+    });
+
+    localStorage.setItem("brokerFinance", JSON.stringify(financeData));
+    render();
+  }
+};
+
+window.changeMonth = (diff) => {
+  viewDate.setMonth(viewDate.getMonth() + diff);
+  resetForm();
+  updateDisplay();
+};
+
+window.copyRecurrent = () => {
+  const currentMonth = viewDate.getMonth();
+  const currentYear = viewDate.getFullYear();
+
+  const recurring = financeData.filter((item) => {
+    const d = new Date(item.date + "T00:00:00");
+    return (
+      item.isRecurring &&
+      (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear)
+    );
+  });
+
+  if (recurring.length === 0) {
+    alert("Nenhuma conta fixa encontrada.");
+    return;
+  }
+
+  const newItems = recurring
+    .filter((item) => {
+      const oldDate = new Date(item.date + "T00:00:00");
+
+      const alreadyExists = financeData.some((i) => {
+        const d = new Date(i.date + "T00:00:00");
+        return (
+          i.title === item.title &&
+          i.isRecurring &&
+          d.getMonth() === currentMonth &&
+          d.getFullYear() === currentYear
+        );
+      });
+
+      if (alreadyExists) return false;
+
+      item._newDate = new Date(currentYear, currentMonth, oldDate.getDate());
+
+      return true;
+    })
+    .map((item) => ({
+      ...item,
+      date: item._newDate.toISOString().split("T")[0],
+      status: "pendente",
+    }));
+
+  if (newItems.length === 0) {
+    alert("Já importado.");
+    return;
+  }
+
+  financeData.push(...newItems);
+
+  localStorage.setItem("brokerFinance", JSON.stringify(financeData));
+  render();
+
+  alert("Importado com sucesso!");
+};
+
+updateDisplay();
