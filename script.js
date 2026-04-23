@@ -336,12 +336,23 @@ window.importData = (event) => {
         return;
       }
 
-      financeData = data;
+      // 🔥 evita duplicados
+      const novos = data.filter((novo) => {
+        return !financeData.some((existente) => {
+          return (
+            existente.title === novo.title &&
+            existente.date === novo.date &&
+            existente.amount == novo.amount
+          );
+        });
+      });
+
+      financeData = [...financeData, ...novos];
 
       localStorage.setItem("brokerFinance", JSON.stringify(financeData));
       render();
 
-      alert("Dados importados com sucesso!");
+      alert(`${novos.length} itens importados!`);
     } catch {
       alert("Erro ao importar arquivo.");
     }
