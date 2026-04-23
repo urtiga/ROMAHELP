@@ -53,9 +53,26 @@ const render = () => {
     `R$ ${stats.pending.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   const importArea = document.getElementById("import-area");
-  importArea.innerHTML = financeData.some((i) => i.isRecurring)
-    ? `<button onclick="copyRecurrent()" class="btn-import"><i data-lucide="copy-plus"></i> Importar Contas Fixas Mensais</button>`
-    : "";
+
+  let html = `
+  <button onclick="exportData()" class="btn-import">💾 Exportar Dados</button>
+
+  <input type="file" id="import-file" hidden onchange="importData(event)" />
+
+  <button onclick="document.getElementById('import-file').click()" class="btn-import">
+    📂 Importar Dados
+  </button>
+`;
+
+  if (financeData.some((i) => i.isRecurring)) {
+    html += `
+    <button onclick="copyRecurrent()" class="btn-import">
+      <i data-lucide="copy-plus"></i> Importar Contas Fixas Mensais
+    </button>
+  `;
+  }
+
+  importArea.innerHTML = html;
 
   if (window.lucide) lucide.createIcons();
 };
@@ -293,3 +310,42 @@ window.copyRecurrent = () => {
 };
 
 updateDisplay();
+
+window.exportData = () => {
+  const dataStr = JSON.stringify(financeData, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "finance-backup.json";
+  a.click();
+};
+
+window.importData = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      if (!Array.isArray(data)) {
+        alert("Arquivo inválido.");
+        return;
+      }
+
+      financeData = data;
+
+      localStorage.setItem("brokerFinance", JSON.stringify(financeData));
+      render();
+
+      alert("Dados importados com sucesso!");
+    } catch {
+      alert("Erro ao importar arquivo.");
+    }
+  };
+
+  reader.readAsText(file);
+};

@@ -99,7 +99,25 @@
         </div>
       </div>
 
-      <div id="import-area" class="import-section"></div>
+      <div id="import-area" class="import-section">
+        <button onclick="exportData()" class="btn-import">
+          💾 Exportar Dados
+        </button>
+
+        <input
+          type="file"
+          id="import-file"
+          hidden
+          onchange="importData(event)"
+        />
+
+        <button
+          onclick="document.getElementById('import-file').click()"
+          class="btn-import"
+        >
+          📂 Importar Dados
+        </button>
+      </div>
     </div>
     <script src="script.js"></script>
   </body>
