@@ -1,23 +1,32 @@
 let financeData = JSON.parse(localStorage.getItem("brokerFinance")) || [];
-let viewDate = new Date(); // Mês que o usuário está vendo agora
+let viewDate = new Date();
 let editIndex = null;
+
+const elements = {
+  formContainer: document.getElementById("form-container"),
+  formTitle: document.getElementById("form-title"),
+  submitBtn: document.getElementById("submit-btn"),
+  cancelBtn: document.getElementById("cancel-btn"),
+  form: document.getElementById("finance-form"),
+  importArea: document.getElementById("import-area"),
+};
 
 const init = () => {
   updateDisplay();
-  document.getElementById("date").valueAsDate = new Date();
+  document.getElementById("date").valueAsDate = viewDate;
 };
 
 const updateDisplay = () => {
-  const monthYear = viewDate.toLocaleDateString("pt-BR", {
-    month: "long",
-    year: "numeric",
-  });
-  document.getElementById("current-month-display").innerText = monthYear;
+  const monthName = viewDate.toLocaleDateString("pt-BR", { month: "long" });
+  document.getElementById("dynamic-title").innerText =
+    `Despesas de ${monthName}`;
+  document.getElementById("year-label").innerText = viewDate.getFullYear();
   render();
 };
 
 window.changeMonth = (diff) => {
   viewDate.setMonth(viewDate.getMonth() + diff);
+  resetForm();
   updateDisplay();
 };
 
@@ -25,12 +34,12 @@ const render = () => {
   const container = document.getElementById("finance-container");
   const totalDisplay = document.getElementById("month-total");
   container.innerHTML = "";
+  elements.importArea.innerHTML = "";
   let totalMês = 0;
 
   const vMonth = viewDate.getMonth();
   const vYear = viewDate.getFullYear();
 
-  // Filtra apenas o que pertence ao mês/ano da visualização atual
   const filteredItems = financeData
     .filter((item) => {
       const d = new Date(item.date + "T00:00:00");
@@ -42,74 +51,87 @@ const render = () => {
         new Date(b.date + "T00:00:00").getDate(),
     );
 
-  // Se o mês estiver vazio, oferece importar recorrentes
   if (filteredItems.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:40px; opacity:0.5">
-            <p>Nenhum lançamento para este mês.</p>
-            <button onclick="copyRecurrent()" style="background:var(--primary); border:none; color:white; padding:10px 20px; border-radius:5px">
-                Importar Contas Fixas
-            </button>
+    container.innerHTML = `<div style="text-align:center; padding:30px; border: 2px dashed #334155; border-radius:15px; opacity:0.6">
+            <p>Nenhuma despesa lançada para este mês.</p>
         </div>`;
   }
 
   filteredItems.forEach((item) => {
-    const originalIndex = financeData.indexOf(item);
+    const idx = financeData.indexOf(item);
     const valor = parseFloat(item.amount) || 0;
     totalMês += valor;
-
-    // Lógica de cores da imagem: Se tiver "cartão" ou "visa" ou "master" fica preto
     const isCard = /cartão|visa|master/i.test(item.title);
 
-    const card = document.createElement("article");
-    card.className = `event-card ${item.status} ${isCard ? "is-card" : ""}`;
-
+    const card = document.createElement("div");
+    card.className = `item-card ${item.status} ${isCard ? "is-card" : ""}`;
     card.innerHTML = `
-            <div>
-                <small style="color: #94a3b8">DIA ${new Date(item.date + "T00:00:00").getDate().toString().padStart(2, "0")}</small>
-                <strong style="display: block; text-transform: uppercase; font-size: 0.85rem">${item.title}</strong>
-                <span class="status-tag ${item.status === "pago" ? "tag-pg" : "tag-wait"}">
-                    ${item.status === "pago" ? "PG" : "PENDENTE"}
-                </span>
+            <div class="item-info">
+                <small>DIA ${new Date(item.date + "T00:00:00").getDate().toString().padStart(2, "0")}</small>
+                <b>${item.title}</b>
+                <div class="actions">
+                    <button class="btn-sm" onclick="toggleStatus(${idx})" style="color: ${item.status === "pago" ? "var(--primary)" : "var(--warning)"}">
+                        <i data-lucide="${item.status === "pago" ? "check-circle" : "circle"}"></i>
+                    </button>
+                    <button class="btn-sm" onclick="handleEdit(${idx})"><i data-lucide="pencil"></i></button>
+                    <button class="btn-sm" onclick="handleDelete(${idx})" style="color:var(--danger)"><i data-lucide="trash-2"></i></button>
+                </div>
             </div>
-            <div style="text-align: right">
-                <div class="amount-display">R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-                <div class="card-actions" style="margin-top: 5px">
-                    <button class="btn-icon" onclick="toggleStatus(${originalIndex})"><i data-lucide="check"></i></button>
-                    <button class="btn-icon" onclick="handleEdit(${originalIndex})"><i data-lucide="pencil"></i></button>
-                    <button class="btn-icon" onclick="handleDelete(${originalIndex})"><i data-lucide="trash"></i></button>
+            <div class="amount">
+                R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                <div style="font-size: 10px; font-weight: bold; margin-top: 4px; color: ${item.status === "pago" ? "var(--primary)" : "var(--warning)"}">
+                    ${item.status === "pago" ? "PAGO" : "PENDENTE"}
                 </div>
             </div>
         `;
     container.appendChild(card);
   });
 
+  // Botão de Importação sempre visível se houver recorrentes globais
+  const hasRecurrents = financeData.some((item) => item.isRecurring);
+  if (hasRecurrents) {
+    elements.importArea.innerHTML = `
+            <button onclick="copyRecurrent()" class="btn-import">
+                <i data-lucide="copy-plus"></i> Importar Contas Fixas Mensais
+            </button>
+        `;
+  }
+
   totalDisplay.innerText = `R$ ${totalMês.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   if (window.lucide) lucide.createIcons();
 };
 
-// MÁGICA: Pega tudo que é recorrente e joga para o mês que o pai está vendo
-window.copyRecurrent = () => {
-  const recurrents = financeData.filter((item) => item.isRecurring);
+window.handleEdit = (i) => {
+  const item = financeData[i];
+  document.getElementById("title").value = item.title;
+  document.getElementById("amount").value = item.amount;
+  document.getElementById("date").value = item.date;
+  document.getElementById("status").value = item.status;
+  document.getElementById("is-recurring").checked = item.isRecurring;
 
-  // Evita duplicatas: remove o que já existir de recorrente no mês destino antes de copiar
-  const newItems = recurrents.map((item) => {
-    const newDate = new Date(
-      viewDate.getFullYear(),
-      viewDate.getMonth(),
-      new Date(item.date + "T00:00:00").getDate(),
-    );
-    return {
-      ...item,
-      status: "pendente", // Sempre começa pendente no mês novo
-      date: newDate.toISOString().split("T")[0],
-    };
-  });
-
-  financeData.push(...newItems);
-  save();
+  editIndex = i;
+  elements.formContainer.classList.add("editing-mode");
+  elements.formTitle.innerText = "⚠️ Editando Lançamento Existente";
+  elements.submitBtn.innerText = "Salvar Alterações";
+  elements.submitBtn.style.background = "var(--warning)";
+  elements.submitBtn.style.color = "black";
+  elements.cancelBtn.style.display = "block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-document.getElementById("finance-form").onsubmit = (e) => {
+window.resetForm = () => {
+  editIndex = null;
+  elements.form.reset();
+  document.getElementById("date").valueAsDate = viewDate;
+  elements.formContainer.classList.remove("editing-mode");
+  elements.formTitle.innerText = "Novo Lançamento";
+  elements.submitBtn.innerText = "Adicionar Lançamento";
+  elements.submitBtn.style.background = "var(--accent)";
+  elements.submitBtn.style.color = "white";
+  elements.cancelBtn.style.display = "none";
+};
+
+elements.form.onsubmit = (e) => {
   e.preventDefault();
   const newItem = {
     title: document.getElementById("title").value,
@@ -122,38 +144,63 @@ document.getElementById("finance-form").onsubmit = (e) => {
   if (editIndex !== null) financeData[editIndex] = newItem;
   else financeData.push(newItem);
 
-  save();
-  e.target.reset();
-  document.getElementById("date").valueAsDate = new Date();
+  localStorage.setItem("brokerFinance", JSON.stringify(financeData));
+  resetForm();
+  render();
 };
 
-window.toggleStatus = (index) => {
-  financeData[index].status =
-    financeData[index].status === "pago" ? "pendente" : "pago";
-  save();
-};
+window.copyRecurrent = () => {
+  const recurrents = financeData.filter((item) => item.isRecurring);
+  const currentMonthTitles = financeData
+    .filter((item) => {
+      const d = new Date(item.date + "T00:00:00");
+      return (
+        d.getMonth() === viewDate.getMonth() &&
+        d.getFullYear() === viewDate.getFullYear()
+      );
+    })
+    .map((i) => i.title.toLowerCase());
 
-window.handleEdit = (index) => {
-  const item = financeData[index];
-  document.getElementById("title").value = item.title;
-  document.getElementById("amount").value = item.amount;
-  document.getElementById("date").value = item.date;
-  document.getElementById("status").value = item.status;
-  document.getElementById("is-recurring").checked = item.isRecurring;
-  editIndex = index;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-};
+  const toImport = recurrents.filter(
+    (r) => !currentMonthTitles.includes(r.title.toLowerCase()),
+  );
 
-window.handleDelete = (index) => {
-  if (confirm("Excluir?")) {
-    financeData.splice(index, 1);
-    save();
+  if (toImport.length === 0) {
+    alert("Todas as contas fixas já constam neste mês!");
+    return;
   }
-};
 
-const save = () => {
+  toImport.forEach((item) => {
+    const d = new Date(item.date + "T00:00:00");
+    const newDate = new Date(
+      viewDate.getFullYear(),
+      viewDate.getMonth(),
+      d.getDate(),
+    );
+    financeData.push({
+      ...item,
+      status: "pendente",
+      date: newDate.toISOString().split("T")[0],
+    });
+  });
+
   localStorage.setItem("brokerFinance", JSON.stringify(financeData));
   render();
+};
+
+window.toggleStatus = (i) => {
+  financeData[i].status =
+    financeData[i].status === "pago" ? "pendente" : "pago";
+  localStorage.setItem("brokerFinance", JSON.stringify(financeData));
+  render();
+};
+
+window.handleDelete = (i) => {
+  if (confirm("Deseja apagar este item permanentemente?")) {
+    financeData.splice(i, 1);
+    localStorage.setItem("brokerFinance", JSON.stringify(financeData));
+    render();
+  }
 };
 
 init();

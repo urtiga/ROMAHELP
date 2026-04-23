@@ -3,61 +3,78 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Broker Finance - Pro</title>
+    <title>Broker Finance Pro - Controle de Despesas</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
   </head>
   <body>
-    <header class="admin-panel">
-      <div class="month-navigation">
-        <button onclick="changeMonth(-1)">
-          <i data-lucide="chevron-left"></i>
-        </button>
-        <h1 id="current-month-display">MAIO 2026</h1>
-        <button onclick="changeMonth(1)">
-          <i data-lucide="chevron-right"></i>
-        </button>
-      </div>
+    <div class="app-container">
+      <header class="main-header">
+        <div class="nav-control">
+          <button
+            onclick="changeMonth(-1)"
+            class="nav-btn"
+            title="Mês Anterior"
+          >
+            <i data-lucide="chevron-left"></i>
+          </button>
+          <div class="title-group">
+            <h1 id="dynamic-title">Despesas de Maio</h1>
+            <span id="year-label">2026</span>
+          </div>
+          <button onclick="changeMonth(1)" class="nav-btn" title="Próximo Mês">
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
 
-      <div class="total-banner">
-        <span>Previsão de Gastos: </span>
-        <strong id="month-total">R$ 0,00</strong>
-      </div>
+        <div class="summary-card">
+          <small>PREVISÃO TOTAL DO MÊS</small>
+          <strong id="month-total">R$ 0,00</strong>
+        </div>
+      </header>
 
-      <form id="finance-form">
-        <input
-          type="text"
-          id="title"
-          placeholder="Descrição (Ex: Uniesp Ryan...)"
-          required
-        />
-        <div class="input-row">
+      <section class="form-section" id="form-container">
+        <h3 id="form-title">Novo Lançamento</h3>
+        <form id="finance-form">
           <input
-            type="number"
-            id="amount"
-            step="0.01"
-            placeholder="Valor (R$)"
+            type="text"
+            id="title"
+            placeholder="Descrição (Ex: Condomínio, Unimed...)"
             required
           />
-          <input type="date" id="date" required />
-        </div>
-        <div class="options-row">
-          <select id="status">
-            <option value="pendente">Pendente</option>
-            <option value="pago">Pago (PG)</option>
-          </select>
-          <label class="checkbox-container">
-            <input type="checkbox" id="is-recurring" />
-            <span>Conta Mensal Fixa</span>
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit" id="submit-btn">Salvar no Mês</button>
-        </div>
-      </form>
-    </header>
+          <div class="row">
+            <input
+              type="number"
+              id="amount"
+              step="0.01"
+              placeholder="Valor R$"
+              required
+            />
+            <input type="date" id="date" required />
+          </div>
+          <div class="row">
+            <select id="status">
+              <option value="pendente">🟡 Pendente</option>
+              <option value="pago">✅ Pago (PG)</option>
+            </select>
+            <label class="recurrence-check">
+              <input type="checkbox" id="is-recurring" />
+              <span>Conta Fixa (Mensal)</span>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="submit-btn">Adicionar Lançamento</button>
+            <button type="button" id="cancel-btn" onclick="resetForm()">
+              Cancelar Edição
+            </button>
+          </div>
+        </form>
+      </section>
 
-    <main class="schedule-grid" id="finance-container"></main>
+      <main id="finance-container" class="items-list"></main>
+
+      <div id="import-area" class="import-section"></div>
+    </div>
 
     <script src="script.js"></script>
   </body>
