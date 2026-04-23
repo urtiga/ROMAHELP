@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guia do Corretor - Organizador Mensal</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body>
+    <section class="today-banner" id="today-banner"></section>
+    <header class="admin-panel">
+      <h3>Novo Compromisso / Lembrete</h3>
+      <form id="schedule-form">
+        <input
+          type="text"
+          id="title"
+          placeholder="Título (Ex: Seguro Auto - João, Consulta...)"
+          required
+        />
+
+        <div class="input-group">
+          <input type="date" id="date" required />
+          <div class="time-picker">
+            <select id="hour" title="Hora"></select>
+            <span>:</span>
+            <select id="minute" title="Minutos"></select>
+          </div>
+        </div>
+
+        <select id="category">
+          <option value="vencimento">Vencimento de Seguro</option>
+          <option value="pagamento">Pagamento / Cobrança</option>
+          <option value="reuniao">Reunião com Cliente</option>
+          <option value="saude">Consulta Médica</option>
+          <option value="outros">Outros</option>
+        </select>
+
+        <div class="form-actions">
+          <button type="submit" id="submit-btn">Agendar</button>
+          <button type="button" id="clear-btn">Limpar Tudo</button>
+        </div>
+      </form>
+    </header>
+
+    <main class="schedule-grid" id="schedule-container"></main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
